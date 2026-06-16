@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>СловоДня — Мероприятие</title>
+  <style>
+    :root {
+      --bg: #0a1428;
+      --card: #1e2937;
+      --text: #e2e8f0;
+      --accent: #67e8f9;
+      --success: #4ade80;
+    }
+    [data-theme="light"] {
+      --bg: #f0f9ff;
+      --card: #ffffff;
+      --text: #1e2937;
+      --accent: #0891b2;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 20px;
+      overflow-x: hidden;
+      position: relative;
+    }
+    .background {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      pointer-events: none;
+      z-index: -1;
+      opacity: 0.15;
+    }
+    .bg-letter {
+      position: absolute;
+      font-size: 4rem;
+      font-weight: bold;
+      color: var(--accent);
+      animation: float 25s infinite linear;
+      user-select: none;
+    }
+    @keyframes float {
+      0% { transform: translateY(100vh) rotate(0deg); }
+      100% { transform: translateY(-100vh) rotate(360deg); }
+    }
+    .container { max-width: 860px; margin: 0 auto; position: relative; z-index: 2; }
+    header { text-align: center; margin-bottom: 30px; }
+    h1 { font-size: 3.5rem; color: var(--accent); text-shadow: 0 0 30px rgba(103,232,249,0.5); }
+    nav { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin: 25px 0; }
+    button {
+      padding: 15px 28px;
+      background: var(--card);
+      color: var(--text);
+      border: none;
+      border-radius: 16px;
+      cursor: pointer;
+      font-size: 1.15rem;
+      transition: all 0.3s;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+    }
+    button:hover { transform: translateY(-5px); background: var(--accent); color: #000; }
+    .card {
+      background: var(--card);
+      border-radius: 24px;
+      padding: 32px;
+      margin-bottom: 30px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 11px;
+      max-width: 420px;
+      margin: 32px auto;
+    }
+    .tile {
+      width: 76px; height: 76px;
+      border: 3px solid #475569;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.6rem;
+      font-weight: bold;
+      text-transform: uppercase;
+      transition: all 0.6s;
+      border-radius: 14px;
+    }
+    .correct { background: var(--success) !important; border-color: var(--success); color: #000; }
+    .present { background: #fcd34d !important; border-color: #fcd34d; color: #000; }
+    .absent { background: #475569 !important; border-color: #475569; color: white; }
+    .keyboard { max-width: 580px; margin: 30px auto; }
+    .row { display: flex; justify-content: center; gap: 7px; margin-bottom: 9px; }
+    .key {
+      padding: 22px 14px;
+      background: #334155;
+      color: white;
+      border-radius: 12px;
+      font-weight: bold;
+      min-width: 40px;
+      text-align: center;
+      cursor: pointer;
+    }
+    .timer { font-size: 2rem; font-weight: bold; color: #f87171; text-align: center; margin: 20px 0; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { padding: 18px 12px; text-align: center; border-bottom: 1px solid #475569; }
+    th { color: var(--accent); }
+    .modal {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.93);
+      display: none; align-items: center; justify-content: center; z-index: 1000;
+    }
+    .modal-content {
+      background: var(--card);
+      padding: 40px;
+      border-radius: 24px;
+      width: 92%;
+      max-width: 480px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body data-theme="dark">
+  <div class="background" id="background"></div>
+  <div class="container">
+    <header>
+      <h1>СловоДня</h1>
+      <p id="user-info" style="font-size:1.3rem;"></p>
+      <button onclick="toggleTheme()" id="theme-btn" style="margin-top:15px;">☀️ Светлая тема</button>
+    </header>
+    <nav>
+      <button onclick="showSection('home')">🏠 Главная</button>
+      <button onclick="startGameSession()">▶ Начать сессию (5 мин)</button>
+      <button onclick="showSection('leaderboard')">🏆 Лидеры</button>
+      <button onclick="showSection('profile')">👤 Профиль</button>
+    </nav>
+    <div id="home" class="section card">
+      <h2>Готовы испытать удачу?</h2>
+      <p>5 минут • случайные слова • соревновательный дух</p>
+      <button onclick="startGameSession()" style="width:100%; padding:26px; font-size:1.7rem; margin-top:30px;">Начать игру</button>
+    </div>
+    <div id="game" class="section" style="display:none;">
+      <div class="card">
+        <div class="timer">⏱ Осталось: <span id="timer">5:00</span></div>
+        <h3>Раунд <span id="round-info">1</span>/5</h3>
+        <div class="grid" id="grid"></div>
+        <div class="keyboard" id="keyboard"></div>
+      </div>
+    </div>
+    <div id="session-results" class="section" style="display:none;">
+      <div class="card">
+        <h2>🏁 Результаты сессии</h2>
+        <div style="font-size:2.4rem; margin:30px 0; font-weight:bold;" id="total-score">0</div>
+        <p style="font-size:1.4rem;">Общая сумма попыток</p>
+        <button onclick="location.reload()" style="width:100%; padding:20px; margin-top:30px; font-size:1.2rem;">Играть снова</button>
+      </div>
+    </div>
+    <div id="leaderboard" class="section" style="display:none;">
+      <div class="card">
+        <h2>🏆 Таблица лидеров</h2>
+        <table id="leader-table">
+          <thead><tr><th>#</th><th>Игрок</th><th>Сумма попыток</th><th>Дата</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+    <div id="profile" class="section" style="display:none;">
+      <div class="card">
+        <h2>👤 Ваш профиль</h2>
+        <p><strong>Ник:</strong> <span id="profile-nick"></span></p>
+        <p><strong>Телефон:</strong> <span id="profile-phone"></span></p>
+        <h3 style="margin:25px 0 15px;">Статистика</h3>
+        <p>Сессий: <span id="stats-games">0</span></p>
+        <p>Побед в раундах: <span id="stats-wins">0</span></p>
+        <button onclick="logout()" style="width:100%; margin-top:30px; background:#ef4444; padding:18px;">Выйти</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="auth-modal" class="modal">
+    <div class="modal-content">
+      <h2>Регистрация</h2>
+      <input type="text" id="nick" placeholder="Никнейм" style="width:100%;padding:16px;margin:15px 0;border-radius:12px;">
+      <input type="tel" id="phone" placeholder="Номер телефона (11-12 цифр)" style="width:100%;padding:16px;margin:15px 0;border-radius:12px;">
+      <button onclick="register()" style="width:100%;padding:18px;">Начать играть</button>
+    </div>
+  </div>
+
+  <div id="end-modal" class="modal">
+    <div class="modal-content">
+      <h2>Время вышло!</h2>
+      <p id="end-message"></p>
+      <button onclick="showSessionResults()" style="width:100%;padding:18px;">Показать результат</button>
+    </div>
+  </div>
+
+  <div id="admin-panel" style="display:none; position:fixed; top:20px; right:20px; background:var(--card); padding:30px; border-radius:24px; border:4px solid var(--accent); z-index:999; min-width:360px;">
+    <h3>🔧 Админ панель</h3>
+    <textarea id="admin-words" rows="6" style="width:100%; padding:14px; border-radius:12px; margin:15px 0;">ПРИЗЫ,СТЕНА,КОШКА,АЛМАЗ,ШАЙБА,ПОБЕДА,ФИНАЛ,СЦЕНА,ТРОФЕЙ</textarea>
+    <button onclick="saveAdminWords()" style="width:100%; padding:16px; margin:10px 0;">Сохранить и применить</button>
+    <button onclick="document.getElementById('admin-panel').style.display='none'">Закрыть</button>
+  </div>
+
+  <script>
+    let currentUser = null;
+    let currentRow = 0, currentTile = 0, gameOver = false;
+    let round = 1, maxRounds = 5, timeLeft = 300;
+    let timerInterval = null;
+    let totalAttempts = 0;
+    let usedWords = [];
+    let wordsList = ["ПРИЗЫ","СТЕНА","КОШКА","АЛМАЗ","ШАЙБА","ПОБЕДА","ФИНАЛ","СЦЕНА","ТРОФЕЙ","КНИГА","МОРЕ","ГОРА","ДОМ","СЛОВО","ИГРА","ПАРК","ЛЕС","РЕКА","ЗВЕЗДА"];
+    let currentWord = "";
+
+    async function init() {
+      localStorage.removeItem('leaderboard');
+      createBackground();
+      checkAuth();
+      createGrid();
+      createKeyboard();
+      loadLeaderboard();
+      if (window.location.hash === "#admin") document.getElementById('admin-panel').style.display = 'block';
+    }
+
+    function createBackground() {
+      const bg = document.getElementById('background');
+      const letters = 'АБВГДЕЖЗИКЛМНОПРСТУФХЦЧШЩЫЭЮЯ';
+      for (let i = 0; i < 35; i++) {
+        const el = document.createElement('div');
+        el.className = 'bg-letter';
+        el.textContent = letters[Math.floor(Math.random() * letters.length)];
+        el.style.left = Math.random() * 100 + 'vw';
+        el.style.animationDuration = (20 + Math.random() * 30) + 's';
+        el.style.animationDelay = '-' + Math.random() * 30 + 's';
+        el.style.opacity = Math.random() * 0.6 + 0.2;
+        bg.appendChild(el);
+      }
+    }
+
+    function checkAuth() {
+      const saved = localStorage.getItem('currentUser');
+      if (saved) {
+        currentUser = JSON.parse(saved);
+        document.getElementById('user-info').innerHTML = `Привет, <b>${currentUser.nick}</b>!`;
+      } else {
+        document.getElementById('auth-modal').style.display = 'flex';
+      }
+    }
+
+    function register() {
+      const nick = document.getElementById('nick').value.trim();
+      const phone = document.getElementById('phone').value.trim();
+      if (!nick) return alert("Введите никнейм");
+      if (!phone || (phone.length < 11 || phone.length > 12)) {
+        return alert("Номер телефона должен содержать от 11 до 12 символов!");
+      }
+      currentUser = { nick, phone, games: 0, wins: 0, totalAttempts: 0 };
+      localStorage.setItem('currentUser', JSON.stringify(currentUser));
+      document.getElementById('user-info').innerHTML = `Привет, <b>${nick}</b>!`;
+      document.getElementById('auth-modal').style.display = 'none';
+    }
+
+    function toggleTheme() {
+      const isLight = document.body.getAttribute('data-theme') === 'light';
+      document.body.setAttribute('data-theme', isLight ? 'dark' : 'light');
+      document.getElementById('theme-btn').textContent = isLight ? '☀️ Светлая тема' : '🌙 Тёмная тема';
+    }
+
+    function startGameSession() {
+      if (!currentUser) return;
+      totalAttempts = 0;
+      usedWords = [];
+      round = 1;
+      timeLeft = 300;
+      document.getElementById('game').style.display = 'block';
+      document.getElementById('home').style.display = 'none';
+      startTimer();
+      nextRound();
+    }
+
+    function startTimer() {
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        const min = Math.floor(timeLeft / 60);
+        const sec = timeLeft % 60;
+        document.getElementById('timer').textContent = `${min}:${sec < 10 ? '0' : ''}${sec}`;
+        if (timeLeft <= 0) endSession();
+      }, 1000);
+    }
+
+    function getRandomWord() {
+      let available = wordsList.filter(w => !usedWords.includes(w));
+      if (available.length === 0) available = [...wordsList];
+      const word = available[Math.floor(Math.random() * available.length)];
+      usedWords.push(word);
+      return word;
+    }
+
+    function nextRound() {
+      if (round > maxRounds) return endSession();
+      currentWord = getRandomWord();
+      currentRow = 0; 
+      currentTile = 0; 
+      gameOver = false;
+      document.getElementById('round-info').textContent = round;
+      createGrid();
+    }
+
+    function createGrid() {
+      const grid = document.getElementById('grid');
+      grid.innerHTML = '';
+      for (let i = 0; i < 30; i++) {
+        const tile = document.createElement('div');
+        tile.className = 'tile';
+        grid.appendChild(tile);
+      }
+    }
+
+    function createKeyboard() {
+      const kb = document.getElementById('keyboard');
+      kb.innerHTML = '';
+      const rows = ["ЙЦУКЕНГШЩЗХЪ","ФЫВАПРОЛДЖЭ","ЯЧСМИТЬБЮ"];
+      rows.forEach(str => {
+        const row = document.createElement('div');
+        row.className = 'row';
+        str.split('').forEach(letter => {
+          const key = document.createElement('div');
+          key.className = 'key';
+          key.textContent = letter;
+          key.onclick = () => handleInput(letter);
+          row.appendChild(key);
+        });
+        kb.appendChild(row);
+      });
+    }
+
+    function handleInput(letter) {
+      if (gameOver || currentTile >= 5) return;
+      const tiles = document.querySelectorAll('.tile');
+      tiles[currentRow * 5 + currentTile].textContent = letter;
+      currentTile++;
+    }
+
+    document.addEventListener('keydown', e => {
+      if (document.getElementById('game').style.display !== 'block') return;
+      if (e.key === 'Enter') submitGuess();
+      else if (e.key === 'Backspace' && currentTile > 0) {
+        currentTile--;
+        document.querySelectorAll('.tile')[currentRow*5 + currentTile].textContent = '';
+      } else if (/^[а-я]$/i.test(e.key)) {
+        handleInput(e.key.toUpperCase());
+      }
+    });
+
+    function submitGuess() {
+      if (currentTile < 5) return alert("Слово из 5 букв!");
+
+      const tiles = document.querySelectorAll('.tile');
+      let guess = '';
+      for (let i = 0; i < 5; i++) guess += tiles[currentRow * 5 + i].textContent;
+      guess = guess.toUpperCase();
+
+      // === ФИЛЬТР МУСОРА (без проверки по большому словарю) ===
+      if (/(.)\1\1/.test(guess)) {
+        alert("Недопустимое слово! Слишком много одинаковых букв подряд.");
+        return;
+      }
+
+      if (/(.).*\1.*\1.*\1/.test(guess)) {
+        alert("Слишком много повторяющихся букв!");
+        return;
+      }
+
+      if ((guess[0] === guess[2] && guess[2] === guess[4]) || 
+          (guess[1] === guess[3] && guess[0] === guess[4])) {
+        alert("Такого слова не существует!");
+        return;
+      }
+
+      if (!/[АОУЫЭЕЯИЮЁ]/.test(guess)) {
+        alert("В слове должна быть хотя бы одна гласная буква!");
+        return;
+      }
+
+      // Дополнительные запреты
+      if (/^(.{2})\1{1,2}$/.test(guess) || /(.)\1{3,}/.test(guess)) {
+        alert("Такое слово не подходит!");
+        return;
+      }
+
+      // =======================================
+
+      // Оценка слова
+      const wordArr = currentWord.split('');
+      guess.split('').forEach((letter, i) => {
+        const tile = tiles[currentRow * 5 + i];
+        if (letter === wordArr[i]) tile.classList.add('correct');
+        else if (wordArr.includes(letter)) tile.classList.add('present');
+        else tile.classList.add('absent');
+      });
+
+      const attempts = currentRow + 1;
+      totalAttempts += attempts;
+
+      if (guess === currentWord) {
+        setTimeout(() => { round++; nextRound(); }, 700);
+      } else if (currentRow === 5) {
+        round++;
+        nextRound();
+      } else {
+        currentRow++;
+        currentTile = 0;
+      }
+    }
+
+    function endSession() {
+      clearInterval(timerInterval);
+      document.getElementById('end-message').innerHTML = `Сессия окончена!<br>Вы прошли <b>${round-1}</b> раундов.`;
+      document.getElementById('end-modal').style.display = 'flex';
+    }
+
+    function showSessionResults() {
+      document.getElementById('end-modal').style.display = 'none';
+      document.getElementById('game').style.display = 'none';
+      document.getElementById('total-score').textContent = totalAttempts;
+      document.getElementById('session-results').style.display = 'block';
+
+      if (currentUser) {
+        let lb = JSON.parse(localStorage.getItem('leaderboard') || '[]');
+        lb.push({
+          nick: currentUser.nick,
+          totalAttempts: totalAttempts,
+          date: new Date().toLocaleDateString('ru-RU')
+        });
+        lb.sort((a, b) => a.totalAttempts - b.totalAttempts);
+        localStorage.setItem('leaderboard', JSON.stringify(lb));
+        loadLeaderboard();
+      }
+    }
+
+    function loadLeaderboard() {
+      const tbody = document.querySelector('#leader-table tbody');
+      tbody.innerHTML = '';
+      const lb = JSON.parse(localStorage.getItem('leaderboard') || '[]');
+      lb.slice(0, 30).forEach((item, i) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${i+1}</td><td>${item.nick}</td><td><b>${item.totalAttempts}</b></td><td>${item.date}</td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function showSection(sec) {
+      document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
+      document.getElementById(sec).style.display = 'block';
+      if (sec === 'profile' && currentUser) {
+        document.getElementById('profile-nick').textContent = currentUser.nick;
+        document.getElementById('profile-phone').textContent = currentUser.phone || '—';
+        document.getElementById('stats-games').textContent = currentUser.games || 0;
+        document.getElementById('stats-wins').textContent = currentUser.wins || 0;
+      }
+    }
+
+    function saveAdminWords() {
+      const text = document.getElementById('admin-words').value.trim();
+      if (text) {
+        wordsList = text.toUpperCase().split(',').map(w => w.trim()).filter(w => w.length === 5);
+        localStorage.setItem('wordsList', JSON.stringify(wordsList));
+        localStorage.setItem('isAdminWordsActive', 'true');
+        alert("✅ Слова обновлены!");
+      }
+    }
+
+    function logout() {
+      if (confirm("Выйти из аккаунта?")) {
+        localStorage.removeItem('currentUser');
+        localStorage.removeItem('isAdminWordsActive');
+        location.reload();
+      }
+    }
+
+    window.onload = init;
+  </script>
+</body>
+</html>
