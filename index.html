@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>СловоДня — Мероприятие</title>
+  <style>
+    :root {
+      --bg: #0a1428;
+      --card: #1e2937;
+      --text: #e2e8f0;
+      --accent: #67e8f9;
+      --success: #4ade80;
+    }
+    [data-theme="light"] {
+      --bg: #f0f9ff;
+      --card: #ffffff;
+      --text: #1e2937;
+      --accent: #0891b2;
+    }
+
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 20px;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    .background { position: fixed; inset: 0; pointer-events: none; z-index: -1; opacity: 0.15; }
+    .bg-letter {
+      position: absolute;
+      font-size: 4rem;
+      font-weight: bold;
+      color: var(--accent);
+      animation: float 25s infinite linear;
+    }
+    @keyframes float { 0% { transform: translateY(100vh) rotate(0deg); } 100% { transform: translateY(-100vh) rotate(360deg); } }
+
+    .container { max-width: 860px; margin: 0 auto; position: relative; z-index: 2; }
+    header { text-align: center; margin-bottom: 30px; }
+    h1 { font-size: 3.5rem; color: var(--accent); text-shadow: 0 0 30px rgba(103,232,249,0.5); }
+
+    nav { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin: 25px 0; }
+    button {
+      padding: 15px 28px;
+      background: var(--card);
+      color: var(--text);
+      border: none;
+      border-radius: 16px;
+      cursor: pointer;
+      font-size: 1.15rem;
+      transition: all 0.3s;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+    }
+    button:hover { transform: translateY(-5px); background: var(--accent); color: #000; }
+
+    .card { background: var(--card); border-radius: 24px; padding: 32px; margin-bottom: 30px; box-shadow: 0 20px 50px rgba(0,0,0,0.35); }
+
+    .grid {
+      display: grid;
+      gap: 11px;
+      max-width: 600px;
+      margin: 32px auto;
+      justify-content: center;
+    }
+    .tile {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      border: 3px solid #475569;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(1.3rem, 7vw, 2.6rem);
+      font-weight: bold;
+      text-transform: uppercase;
+      transition: all 0.6s;
+      border-radius: 14px;
+    }
+    .correct { background: var(--success) !important; border-color: var(--success); color: #000; }
+    .present { background: #fcd34d !important; border-color: #fcd34d; color: #000; }
+    .absent { background: #475569 !important; border-color: #475569; color: white; }
+
+    .word-length-indicator {
+      text-align: center;
+      color: var(--accent);
+      font-size: 1.2rem;
+      margin: 10px 0;
+      font-weight: bold;
+    }
+
+    .keyboard { max-width: 580px; margin: 25px auto; }
+    .row { display: flex; justify-content: center; gap: 7px; margin-bottom: 9px; }
+    .key {
+      padding: 22px 14px;
+      background: #334155;
+      color: white;
+      border-radius: 12px;
+      font-weight: bold;
+      min-width: 40px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .key.correct { background: #4ade80; color: #000; }
+    .key.present { background: #fcd34d; color: #000; }
+    .key.absent { background: #475569; color: white; }
+
+    .timer { font-size: 2rem; font-weight: bold; color: #f87171; text-align: center; margin: 20px 0; }
+    .hint-btn {
+      background: #eab308;
+      color: #000;
+      font-weight: bold;
+      margin-top: 10px;
+      width: 100%;
+      padding: 16px;
+      font-size: 1.1rem;
+    }
+    .hint-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .hint-text {
+      background: #334155;
+      border-radius: 12px;
+      padding: 15px;
+      margin: 10px 0;
+      text-align: center;
+      font-style: italic;
+      color: #fcd34d;
+      display: none;
+    }
+
+    @media (max-width: 480px) {
+      body { padding: 10px; }
+      h1 { font-size: 2.1rem; }
+      .card { padding: 18px; border-radius: 18px; }
+      button { padding: 12px 16px; font-size: 1rem; }
+      nav { gap: 8px; }
+      .grid { gap: 6px; }
+      .keyboard { max-width: 100%; }
+      .row { gap: 3px; margin-bottom: 6px; }
+      .key { padding: 9px 3px; min-width: 20px; font-size: 0.72rem; border-radius: 7px; }
+      .modal-content { padding: 22px; }
+    }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { padding: 18px 12px; text-align: center; border-bottom: 1px solid #475569; }
+    th { color: var(--accent); }
+
+    .modal {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.93);
+      display: none; align-items: center; justify-content: center; z-index: 1000;
+    }
+    .modal-content {
+      background: var(--card);
+      padding: 40px;
+      border-radius: 24px;
+      width: 92%;
+      max-width: 480px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body data-theme="dark">
+  <div class="background" id="background"></div>
+
+  <div class="container">
+    <header>
+      <h1>СловоДня</h1>
+      <p id="user-info" style="font-size:1.3rem;"></p>
+      <button onclick="toggleTheme()" id="theme-btn" style="margin-top:15px;">☀️ Светлая тема</button>
+    </header>
+
+    <nav>
+      <button onclick="showSection('home')">🏠 Главная</button>
+      <button onclick="startGameSession()">▶ Начать сессию (5 мин)</button>
+      <button onclick="showSection('leaderboard')">🏆 Лидеры</button>
+      <button onclick="showSection('profile')">👤 Профиль</button>
+    </nav>
+
+    <!-- Главная -->
+    <div id="home" class="section card">
+      <h2>Готовы испытать удачу?</h2>
+      <p>5 минут • IT-слова (3-8 букв) • соревновательный дух</p>
+      <button onclick="startGameSession()" style="width:100%; padding:26px; font-size:1.7rem; margin-top:30px;">Начать игру</button>
+    </div>
+
+    <!-- Игра -->
+    <div id="game" class="section" style="display:none;">
+      <div class="card">
+        <div class="timer">⏱ Осталось: <span id="timer">5:00</span></div>
+        <h3>Раунд <span id="round-info">1</span>/5</h3>
+        <div class="word-length-indicator" id="word-length-indicator"></div>
+        <div class="grid" id="grid"></div>
+        <div class="hint-text" id="hint-text"></div>
+        <button class="hint-btn" onclick="giveHint()">💡 Подсказка (IT-описание)</button>
+        <div class="keyboard" id="keyboard"></div>
+      </div>
+    </div>
+
+    <!-- Результат сессии -->
+    <div id="session-results" class="section" style="display:none;">
+      <div class="card">
+        <h2>🏁 Результаты сессии</h2>
+        <div style="font-size:2.5rem; margin:30px 0; font-weight:bold;" id="total-score">0</div>
+        <p style="font-size:1.4rem;">Общая сумма попыток</p>
+        <button onclick="location.reload()" style="width:100%; padding:20px; margin-top:30px; font-size:1.2rem;">Играть снова</button>
+      </div>
+    </div>
+
+    <!-- Лидерборд и Профиль -->
+    <div id="leaderboard" class="section" style="display:none;">
+      <div class="card">
+        <h2>🏆 Таблица лидеров</h2>
+        <table id="leader-table">
+          <thead><tr><th>#</th><th>Игрок</th><th>Сумма попыток</th><th>Дата</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="profile" class="section" style="display:none;">
+      <div class="card">
+        <h2>👤 Ваш профиль</h2>
+        <p><strong>Ник:</strong> <span id="profile-nick"></span></p>
+        <p><strong>Телефон:</strong> <span id="profile-phone"></span></p>
+        <h3 style="margin:25px 0 15px;">Статистика</h3>
+        <p>Сессий: <span id="stats-games">0</span></p>
+        <p>Побед в раундах: <span id="stats-wins">0</span></p>
+        <button onclick="logout()" style="width:100%; margin-top:30px; background:#ef4444; padding:18px;">Выйти</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Модальные окна -->
+  <div id="auth-modal" class="modal">
+    <div class="modal-content">
+      <h2>Регистрация</h2>
+      <input type="text" id="nick" placeholder="Никнейм" maxlength="20" style="width:100%;padding:16px;margin:15px 0;border-radius:12px;">
+      <input type="tel" id="phone" placeholder="Номер телефона (11-12 цифр)" maxlength="12" inputmode="numeric" style="width:100%;padding:16px;margin:15px 0;border-radius:12px;">
+      <button onclick="register()" style="width:100%;padding:18px;">Начать играть</button>
+    </div>
+  </div>
+
+  <div id="end-modal" class="modal">
+    <div class="modal-content">
+      <h2>Время вышло!</h2>
+      <p id="end-message"></p>
+      <button onclick="showSessionResults()" style="width:100%;padding:18px;">Показать результат</button>
+    </div>
+  </div>
+
+  <!-- Админ -->
+  <div id="admin-panel" style="display:none; position:fixed; top:20px; right:20px; background:var(--card); padding:30px; border-radius:24px; border:4px solid var(--accent); z-index:999; min-width:360px;">
+    <h3>🔧 Админ панель</h3>
+    <textarea id="admin-words" rows="8" style="width:100%; padding:14px; border-radius:12px; margin:15px 0;">БАЗА,ДЕВАЙС,ДОСТУП,ЗАПРОС,КЛИЕНТ,МАССИВ,МОДЕМ,ОБЛАКО,ПОРТАЛ,СЕРВЕР,СОФТ,ТРАФИК,ФАЙЛЫ,ХОСТИНГ,ЧИПСЕТ,ШЛЮЗ,ПРОГРАММИСТ,АЛГОРИТМ,ИНТЕРФЕЙС,БРАУЗЕР,КОМПИЛЯТОР,БИТ,БАЙТ,ПИКСЕЛЬ,ФРЕЙМВОРК,ДЕБАГГЕР</textarea>
+    <button onclick="saveAdminWords()" style="width:100%; padding:16px; margin:10px 0;">Сохранить и применить</button>
+    <button onclick="document.getElementById('admin-panel').style.display='none'">Закрыть</button>
+  </div>
+
+  <canvas id="confetti" style="position:fixed; top:0; left:0; width:100%; height:100%; z-index:100; pointer-events:none; display:none;"></canvas>
+
+  <script>
+    let currentUser = null;
+    let currentRow = 0, currentTile = 0, gameOver = false;
+    let round = 1, maxRounds = 5, timeLeft = 300;
+    let timerInterval = null;
+    let totalAttempts = 0;
+    let usedWords = [];
+    let wordsList = ["БАЗА", "ДЕВАЙС", "ДОСТУП", "ЗАПРОС", "КЛИЕНТ", "МАССИВ", "МОДЕМ", "ОБЛАКО", "ПОРТАЛ", "СЕРВЕР", "СОФТ", "ТРАФИК", "ФАЙЛЫ", "ХОСТИНГ", "ЧИПСЕТ", "ШЛЮЗ", "ПРОГРАММИСТ", "АЛГОРИТМ", "ИНТЕРФЕЙС", "БРАУЗЕР", "КОМПИЛЯТОР", "БИТ", "БАЙТ", "ПИКСЕЛЬ", "ФРЕЙМВОРК", "ДЕБАГГЕР"];
+    let currentWord = "";
+    let wordLength = 5;
+    let hintUsed = false;
+
+    // IT-описания для слов
+    const wordHints = {
+      "БАЗА": "Хранилище структурированных данных",
+      "ДЕВАЙС": "Электронное устройство или гаджет",
+      "ДОСТУП": "Право на использование ресурса",
+      "ЗАПРОС": "Обращение клиента к серверу",
+      "КЛИЕНТ": "Программа для доступа к сервису",
+      "МАССИВ": "Структура данных в программировании",
+      "МОДЕМ": "Устройство для подключения к сети",
+      "ОБЛАКО": "Удаленное хранилище в интернете",
+      "ПОРТАЛ": "Крупный веб-сайт с сервисами",
+      "СЕРВЕР": "Мощный компьютер для обработки запросов",
+      "СОФТ": "Программное обеспечение (сленг)",
+      "ТРАФИК": "Объем передаваемых данных",
+      "ФАЙЛЫ": "Цифровые документы на диске",
+      "ХОСТИНГ": "Услуга размещения сайта в сети",
+      "ЧИПСЕТ": "Набор микросхем на плате",
+      "ШЛЮЗ": "Сетевой узел для соединения сетей",
+      "ПРОГРАММИСТ": "Специалист по написанию кода",
+      "АЛГОРИТМ": "Последовательность действий для решения задачи",
+      "ИНТЕРФЕЙС": "Средство взаимодействия пользователя с программой",
+      "БРАУЗЕР": "Программа для просмотра веб-страниц",
+      "КОМПИЛЯТОР": "Программа для перевода кода в машинный язык",
+      "БИТ": "Минимальная единица информации",
+      "БАЙТ": "8 бит информации",
+      "ПИКСЕЛЬ": "Точка на экране монитора",
+      "ФРЕЙМВОРК": "Готовая основа для разработки приложений",
+      "ДЕБАГГЕР": "Инструмент для поиска ошибок в коде"
+    };
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    const canvas = document.getElementById('confetti');
+    const ctx = canvas.getContext('2d');
+    let confettiParticles = [];
+
+    function init() {
+      createBackground();
+      checkAuth();
+      createKeyboard();
+      loadLeaderboard();
+
+      const savedWords = localStorage.getItem('wordsList');
+      if (savedWords) {
+        const parsed = JSON.parse(savedWords);
+        const validWords = parsed.filter(w => w.length >= 3 && w.length <= 8);
+        if (validWords.length > 0) {
+          wordsList = validWords;
+        }
+        parsed.forEach(word => {
+          if (!wordHints[word]) {
+            wordHints[word] = `IT-термин из ${word.length} букв`;
+          }
+        });
+      }
+
+      if (window.location.hash === "#admin") document.getElementById('admin-panel').style.display = 'block';
+    }
+
+    function createBackground() {
+      const bg = document.getElementById('background');
+      const letters = 'АБВГДЕЖЗИКЛМНОПРСТУФХЦЧШЩЫЭЮЯ';
+      for (let i = 0; i < 35; i++) {
+        const el = document.createElement('div');
+        el.className = 'bg-letter';
+        el.textContent = letters[Math.floor(Math.random() * letters.length)];
+        el.style.left = Math.random() * 100 + 'vw';
+        el.style.animationDuration = (20 + Math.random() * 30) + 's';
+        el.style.animationDelay = '-' + Math.random() * 30 + 's';
+        el.style.opacity = Math.random() * 0.6 + 0.2;
+        bg.appendChild(el);
+      }
+    }
+
+    function launchConfetti() {
+      canvas.style.display = 'block';
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      confettiParticles = [];
+      for (let i = 0; i < 300; i++) {
+        confettiParticles.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height - canvas.height,
+          size: Math.random() * 12 + 8,
+          speed: Math.random() * 8 + 5,
+          angle: Math.random() * 360,
+          color: ['#4ade80', '#67e8f9', '#fcd34d', '#f87171', '#c084fc'][Math.floor(Math.random()*5)]
+        });
+      }
+      animateConfetti();
+    }
+
+    function animateConfetti() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      let stillAlive = false;
+      confettiParticles.forEach((p, i) => {
+        p.y += p.speed;
+        p.angle += 5;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.angle * Math.PI / 180);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
+        ctx.restore();
+        if (p.y < canvas.height + 50) stillAlive = true;
+      });
+      if (stillAlive) requestAnimationFrame(animateConfetti);
+      else canvas.style.display = 'none';
+    }
+
+    function giveHint() {
+      if (hintUsed) return alert("Подсказка уже использована в этом раунде!");
+      
+      const hintText = wordHints[currentWord] || `IT-термин из ${wordLength} букв`;
+      document.getElementById('hint-text').textContent = `💡 ${hintText}`;
+      document.getElementById('hint-text').style.display = 'block';
+      hintUsed = true;
+      document.querySelector('.hint-btn').disabled = true;
+    }
+
+    function checkAuth() {
+      const saved = localStorage.getItem('currentUser');
+      if (saved) {
+        currentUser = JSON.parse(saved);
+        document.getElementById('user-info').innerHTML = `Привет, <b>${escapeHtml(currentUser.nick)}</b>!`;
+      } else {
+        document.getElementById('auth-modal').style.display = 'flex';
+      }
+    }
+
+    function register() {
+      const nick = document.getElementById('nick').value.trim().slice(0, 20);
+      const phone = document.getElementById('phone').value.trim();
+      if (!nick) return alert("Введите никнейм");
+      if (!/^\d{11,12}$/.test(phone)) {
+        return alert("Номер телефона должен содержать от 11 до 12 цифр!");
+      }
+      currentUser = { nick, phone, games: 0, wins: 0, totalAttempts: 0 };
+      localStorage.setItem('currentUser', JSON.stringify(currentUser));
+      document.getElementById('user-info').innerHTML = `Привет, <b>${escapeHtml(nick)}</b>!`;
+      document.getElementById('auth-modal').style.display = 'none';
+    }
+
+    function toggleTheme() {
+      const isLight = document.body.getAttribute('data-theme') === 'light';
+      document.body.setAttribute('data-theme', isLight ? 'dark' : 'light');
+      document.getElementById('theme-btn').textContent = isLight ? '☀️ Светлая тема' : '🌙 Тёмная тема';
+    }
+
+    function createGrid() {
+      const grid = document.getElementById('grid');
+      grid.innerHTML = '';
+      
+      // Устанавливаем количество колонок в зависимости от длины слова
+      grid.style.gridTemplateColumns = `repeat(${wordLength}, 1fr)`;
+      
+      // Создаем ячейки для 6 попыток
+      const totalTiles = 6 * wordLength;
+      for (let i = 0; i < totalTiles; i++) {
+        const tile = document.createElement('div');
+        tile.className = 'tile';
+        grid.appendChild(tile);
+      }
+      
+      // Показываем индикатор длины слова
+      document.getElementById('word-length-indicator').textContent = 
+        `Длина слова: ${wordLength} букв`;
+    }
+
+    function createKeyboard() {
+      const kb = document.getElementById('keyboard');
+      kb.innerHTML = '';
+      const rows = ["ЁЙЦУКЕНГШЩЗХЪ","ФЫВАПРОЛДЖЭ","ЯЧСМИТЬБЮ"];
+      rows.forEach(str => {
+        const row = document.createElement('div');
+        row.className = 'row';
+        str.split('').forEach(letter => {
+          const key = document.createElement('div');
+          key.className = 'key';
+          key.textContent = letter;
+          key.dataset.letter = letter;
+          key.onclick = () => handleInput(letter);
+          row.appendChild(key);
+        });
+        kb.appendChild(row);
+      });
+    }
+
+    function updateKeyboard(guess, results) {
+      guess.split('').forEach((letter, i) => {
+        const key = document.querySelector(`.key[data-letter="${letter}"]`);
+        if (!key) return;
+        const status = results[i];
+        if (status === 'correct') {
+          key.classList.remove('present', 'absent');
+          key.classList.add('correct');
+        } else if (status === 'present' && !key.classList.contains('correct')) {
+          key.classList.remove('absent');
+          key.classList.add('present');
+        } else if (status === 'absent' && !key.classList.contains('correct') && !key.classList.contains('present')) {
+          key.classList.add('absent');
+        }
+      });
+    }
+
+    function colorTiles(guess, word, tiles) {
+      const guessArr = guess.split('');
+      const wordArr = word.split('');
+      const results = new Array(wordLength).fill('absent');
+      const matched = new Array(wordLength).fill(false);
+
+      // Первый проход - правильные буквы на правильных местах
+      guessArr.forEach((letter, i) => {
+        if (letter === wordArr[i]) {
+          results[i] = 'correct';
+          matched[i] = true;
+        }
+      });
+      
+      // Второй проход - правильные буквы на неправильных местах
+      guessArr.forEach((letter, i) => {
+        if (results[i] === 'correct') return;
+        const idx = wordArr.findIndex((wl, j) => wl === letter && !matched[j]);
+        if (idx !== -1) {
+          results[i] = 'present';
+          matched[idx] = true;
+        }
+      });
+
+      results.forEach((status, i) => tiles[currentRow * wordLength + i].classList.add(status));
+      return results;
+    }
+
+    function handleInput(letter) {
+      if (gameOver || currentTile >= wordLength) return;
+      const tiles = document.querySelectorAll('.tile');
+      tiles[currentRow * wordLength + currentTile].textContent = letter;
+      currentTile++;
+    }
+
+    function submitGuess() {
+      if (gameOver) return;
+      if (currentTile < wordLength) return alert(`Слово должно состоять из ${wordLength} букв!`);
+
+      const tiles = document.querySelectorAll('.tile');
+      let guess = '';
+      for (let i = 0; i < wordLength; i++) guess += tiles[currentRow * wordLength + i].textContent;
+
+      const results = colorTiles(guess, currentWord, tiles);
+      updateKeyboard(guess, results);
+
+      const attempts = currentRow + 1;
+      totalAttempts += attempts;
+
+      if (guess === currentWord) {
+        gameOver = true;
+        if (currentUser) {
+          currentUser.wins = (currentUser.wins || 0) + 1;
+          localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        }
+        launchConfetti();
+        setTimeout(() => { round++; nextRound(); }, 1500);
+      } else if (currentRow === 5) {
+        gameOver = true;
+        setTimeout(() => {
+          alert(`Слово было: ${currentWord}`);
+          round++;
+          nextRound();
+        }, 1000);
+      } else {
+        currentRow++;
+        currentTile = 0;
+      }
+    }
+
+    function getRandomWord() {
+      let available = wordsList.filter(w => !usedWords.includes(w));
+      if (available.length === 0) available = [...wordsList];
+      const word = available[Math.floor(Math.random() * available.length)];
+      usedWords.push(word);
+      return word;
+    }
+
+    function nextRound() {
+      if (round > maxRounds) return endSession('rounds');
+      currentWord = getRandomWord();
+      wordLength = currentWord.length;
+      currentRow = 0; currentTile = 0; gameOver = false;
+      hintUsed = false;
+      document.getElementById('round-info').textContent = round;
+      document.getElementById('hint-text').style.display = 'none';
+      document.getElementById('hint-text').textContent = '';
+      createGrid();
+      resetKeyboardColors();
+      const hintBtn = document.querySelector('.hint-btn');
+      if (hintBtn) hintBtn.disabled = false;
+    }
+
+    function resetKeyboardColors() {
+      document.querySelectorAll('.key').forEach(k => k.classList.remove('correct', 'present', 'absent'));
+    }
+
+    function startGameSession() {
+      if (!currentUser) return;
+      totalAttempts = 0;
+      usedWords = [];
+      round = 1;
+      timeLeft = 300;
+      document.getElementById('game').style.display = 'block';
+      document.getElementById('home').style.display = 'none';
+      document.getElementById('session-results').style.display = 'none';
+      document.getElementById('leaderboard').style.display = 'none';
+      document.getElementById('profile').style.display = 'none';
+      startTimer();
+      nextRound();
+    }
+
+    function startTimer() {
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        const min = Math.floor(timeLeft / 60);
+        const sec = timeLeft % 60;
+        document.getElementById('timer').textContent = `${min}:${sec < 10 ? '0' : ''}${sec}`;
+        if (timeLeft <= 0) endSession('time');
+      }, 1000);
+    }
+
+    function endSession(reason) {
+      clearInterval(timerInterval);
+      if (currentUser) {
+        currentUser.games = (currentUser.games || 0) + 1;
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+      }
+      const title = reason === 'time' ? 'Время вышло!' : 'Все раунды пройдены!';
+      const modalHeading = document.querySelector('#end-modal h2');
+      if (modalHeading) modalHeading.textContent = title;
+      document.getElementById('end-message').innerHTML = `Вы прошли <b>${round - 1}</b> из <b>${maxRounds}</b> раундов.`;
+      document.getElementById('end-modal').style.display = 'flex';
+    }
+
+    function showSessionResults() {
+      document.getElementById('end-modal').style.display = 'none';
+      document.getElementById('game').style.display = 'none';
+      document.getElementById('total-score').textContent = totalAttempts;
+      document.getElementById('session-results').style.display = 'block';
+
+      if (currentUser) {
+        let lb = JSON.parse(localStorage.getItem('leaderboard') || '[]');
+        lb.push({ nick: currentUser.nick, totalAttempts: totalAttempts, date: new Date().toLocaleDateString('ru-RU') });
+        lb.sort((a, b) => a.totalAttempts - b.totalAttempts);
+        localStorage.setItem('leaderboard', JSON.stringify(lb));
+        loadLeaderboard();
+      }
+    }
+
+    function loadLeaderboard() {
+      const tbody = document.querySelector('#leader-table tbody');
+      tbody.innerHTML = '';
+      const lb = JSON.parse(localStorage.getItem('leaderboard') || '[]');
+      lb.slice(0, 30).forEach((item, i) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${i+1}</td><td>${escapeHtml(item.nick)}</td><td><b>${item.totalAttempts}</b></td><td>${item.date}</td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function showSection(sec) {
+      document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
+      document.getElementById(sec).style.display = 'block';
+      if (sec === 'profile' && currentUser) {
+        document.getElementById('profile-nick').textContent = currentUser.nick;
+        document.getElementById('profile-phone').textContent = currentUser.phone || '—';
+        document.getElementById('stats-games').textContent = currentUser.games || 0;
+        document.getElementById('stats-wins').textContent = currentUser.wins || 0;
+      }
+    }
+
+    function saveAdminWords() {
+      const text = document.getElementById('admin-words').value.trim();
+      if (!text) return;
+      const newWords = text.toUpperCase().split(',').map(w => w.trim()).filter(w => w.length >= 3 && w.length <= 8);
+      if (newWords.length === 0) {
+        return alert("⚠️ Не найдено ни одного слова длиной от 3 до 8 букв. Проверьте, что слова разделены запятыми.");
+      }
+      wordsList = newWords;
+      localStorage.setItem('wordsList', JSON.stringify(wordsList));
+      newWords.forEach(word => {
+        if (!wordHints[word]) {
+          wordHints[word] = `IT-термин из ${word.length} букв`;
+        }
+      });
+      alert(`✅ Слова обновлены! Загружено: ${wordsList.length} слов(а)`);
+    }
+
+    function logout() {
+      if (confirm("Выйти из аккаунта?")) {
+        localStorage.removeItem('currentUser');
+        location.reload();
+      }
+    }
+
+    document.addEventListener('keydown', e => {
+      if (document.getElementById('game').style.display !== 'block') return;
+      if (e.key === 'Enter') submitGuess();
+      else if (e.key === 'Backspace' && currentTile > 0) {
+        currentTile--;
+        document.querySelectorAll('.tile')[currentRow * wordLength + currentTile].textContent = '';
+      } else if (/^[а-яё]$/i.test(e.key)) {
+        handleInput(e.key.toUpperCase());
+      }
+    });
+
+    window.onload = init;
+  </script>
+</body>
+</html>
